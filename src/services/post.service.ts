@@ -63,13 +63,17 @@ export class PostService {
 
   // Update post data
   async updatePost(
-    id: string,
+    userId: string,
+    postId: string,
     updatePostDto: UpdatePostDto,
   ): Promise<Post | object> {
     try {
-      const result = await this.postModel.findByIdAndUpdate(id, updatePostDto, {
-        new: true,
-      });
+      const result = await this.postModel.findOneAndUpdate(
+        { _id: postId, userId: userId },
+        updatePostDto,
+        { new: true },
+      );
+      if (!result) throw new NotFoundException(`Impossible to update post`);
       return result;
     } catch (err) {
       throw new Error(`Failed to update the posts: ${err.message}`);
@@ -77,10 +81,13 @@ export class PostService {
   }
 
   // Soft delete post
-  async softDeletePost(id: string): Promise<object> {
+  async softDeletePost(userId: string, postId: string): Promise<object> {
     try {
-      const post = await this.postModel.findById(id);
-      if (!post) throw new NotFoundException(`Post ${id} not found`);
+      const post = await this.postModel.findOne({
+        _id: postId,
+        userId: userId,
+      });
+      if (!post) throw new NotFoundException(`Impossible to delet the post`);
       post.deletedAt = new Date();
       await post.save();
       return { message: 'Post successfully deleted' };

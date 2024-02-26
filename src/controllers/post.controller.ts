@@ -13,17 +13,21 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
 import { PostService } from 'src/services/post.service';
 import { CreatePostDto, UpdatePostDto } from 'src/dto/post.dto';
 import { Post as PostModel } from '../schemas/post.schema';
 
+@ApiTags('post')
 @Controller('post')
 export class PostController {
   constructor(private readonly postService: PostService) {}
   private readonly logger = new Logger(PostController.name);
 
   // Create new post in the database
+  @ApiOperation({ summary: 'Create a new post in the database' })
+  @ApiBearerAuth()
   @Post()
   async createPost(
     @Body() createPostDto: CreatePostDto,
@@ -42,6 +46,7 @@ export class PostController {
   }
 
   // Return all the posts
+  @ApiOperation({ summary: 'Return all posts from the database' })
   @Get()
   async findAll(): Promise<PostModel | object> {
     try {
@@ -57,6 +62,7 @@ export class PostController {
   }
 
   // Find post by Id
+  @ApiOperation({ summary: 'Return a post by its id' })
   @Get(':id')
   async findById(@Param('id') id: string): Promise<PostModel | object> {
     try {
@@ -72,6 +78,7 @@ export class PostController {
   }
 
   // Find all user's posts
+  @ApiOperation({ summary: 'Find a user posts' })
   @Get()
   async findUserPosts(
     @Query('UserId') userId: string,
@@ -89,13 +96,21 @@ export class PostController {
   }
 
   // Update a post data
+  @ApiOperation({ summary: 'Update a post by its id' })
+  @ApiBearerAuth()
   @Put(':id')
   async updatePost(
-    @Param('id') id: string,
+    @Param('id') postId: string,
     @Body() updatePostDto: UpdatePostDto,
+    @Req() req: Request,
   ): Promise<PostModel | object> {
+    const userId = req['userId'];
     try {
-      const result = await this.postService.updatePost(id, updatePostDto);
+      const result = await this.postService.updatePost(
+        userId,
+        postId,
+        updatePostDto,
+      );
       this.logger.log(`Post updated in the database ${JSON.stringify(result)}`);
       return result;
     } catch (err) {
@@ -105,11 +120,17 @@ export class PostController {
   }
 
   // Soft delete a post by its ID
+  @ApiOperation({ summary: 'Soft delete a post by its id' })
+  @ApiBearerAuth()
   @Delete(':id')
   @HttpCode(200)
-  async deletePost(@Param('id') id: string): Promise<object> {
+  async deletePost(
+    @Param('id') postId: string,
+    @Req() req: Request,
+  ): Promise<object> {
+    const userId = req['userId'];
     try {
-      const result = await this.postService.softDeletePost(id);
+      const result = await this.postService.softDeletePost(userId, postId);
       this.logger.log(
         `Post deleted from the database ${JSON.stringify(result)}`,
       );
